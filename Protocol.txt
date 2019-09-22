@@ -1,0 +1,30 @@
+1. Recode P1 binary files (P1.bed,P1.bim,P1.fam) to flat P1.ped and P1.map
+a. Plink --bfile P1 --recode --out P1
+2. Identify IDs with phenotype
+a. Extract FIDS and IIDS from each .ped file
+i. awk {‘print $1” “$2’} filename.ped > includeIDs.txt
+b. Use R script: settingUPincludedIdlists.R
+3. Include IDS in each flat fileset and do QC parameters
+a. Plink --filename --keep includeIDs.txt --geno 0.05 --hwe 0.0001 --maf 0.03 --recode --out filename_ID_filtered
+4. Identify shared and nonshared snps
+a. Extract snps from each .map file
+i. awk {‘print $2’} filename.map > filenameSNPS.txt
+b. Identify nonshared snps
+i. Use R script includedSNPS.R
+5. Remove unshared Snps from both flat filesets
+a. Plink --file filename --exclude excludedsnps.txt --recode --out filename_ID_SNP_filtered
+b. OR retain shared SNPS in both flat filesets:
+i. plink --file filename --extract includedsnps.txt --recode --out filename_ID_SNP_filtered
+6. Merge flat filesets
+a. Plink --file fileset1 --merge fileset2.ped fileset2.map --recode --out GWASmerge
+7. Extract IDs and add phenotype as third column and add back to GWASmerge fileset
+a. Use R script: phenotypedata.R
+b. Plink --file GWASmerge --pheno GWASphenotype.txt --recode --out GWASmerge_wPhenotype
+8. Run PCA on data
+a. Plink --file GWASmerge --pca 
+i. Output will be: plink.eigenvec and plink.eigenval
+9. Create covar file (first 3 PCs)
+a. plink --file GWASmerge_wPhenotype --recode --covar plink.eigenvec --covar-number 1-3 --out GWASfinal
+10. RUN association
+a. Plink --file GWASfinal --logistic --covar GWASfinal.cov --out filename
+b. Plink --file GWASfinal --asoc --out filename
